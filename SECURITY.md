@@ -4,7 +4,7 @@
 
 This is a read-only monitor, **not a sandbox**. QML runs in the Omarchy shell with the logged-in user's access. The Python child inherits that access. Treat installing this plugin like executing local code: review source and trust the shell, Python, NVIDIA utilities and installed dependencies.
 
-The collector reads `/proc` and `/sys` plus filesystem capacity via `statvfs`. It never kills processes, writes system settings or elevates privileges. External execution is fixed argv (no shell interpolation): isolated `/usr/bin/python3 -I` starts the bundled collector and `/usr/bin/nvidia-smi` runs a fixed telemetry query with a 1.5-second timeout. Fixed executable paths avoid PATH shadowing on the supported Arch/Omarchy platform; do not replace them with untrusted helpers.
+The collector reads `/proc` and `/sys` plus filesystem capacity via `statvfs`. It never kills processes, writes system settings or elevates privileges. External execution is fixed argv (no shell interpolation): isolated `/usr/bin/python3 -I` starts the bundled collector and `/usr/bin/nvidia-smi` runs a fixed telemetry query with a 1.5-second timeout. Fixed executable paths avoid PATH shadowing on the supported Arch/Omarchy platform; do not replace them with untrusted helpers. AMD telemetry reads the `amdgpu` device and hwmon files under `/sys/class/drm` directly; no AMD utility, sysfs writes or elevated privileges are used.
 
 Dynamic names in dashboard labels use `Text.PlainText`, preventing rich-text markup/resource interpretation. App images select only fixed local icon paths, not process-supplied URLs. GPU output is parsed as CSV/JSON data, never evaluated as QML or commands.
 

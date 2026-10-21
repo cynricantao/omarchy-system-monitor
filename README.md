@@ -1,8 +1,8 @@
 # System Monitor
 
-Read-only Omarchy/Quickshell bar widget for CPU, RAM, NVIDIA GPU, grouped applications, temperatures, storage and network rates.
+Read-only Omarchy/Quickshell bar widget for CPU, RAM, NVIDIA/AMD GPU, grouped applications, temperatures, storage and network rates.
 
-Plugin ID: `cynricantao.system-monitor`. Requires Omarchy's native `qs.Ui`/`qs.Commons` APIs and `/usr/bin/python3` (standard library only). NVIDIA metrics optionally use `/usr/bin/nvidia-smi`; missing or unsupported telemetry is shown as unavailable. No root privileges, separate service or Python packages are needed. GPU adapters for AMD/Intel and per-application GPU usage are not implemented.
+Plugin ID: `cynricantao.system-monitor`. Requires Omarchy's native `qs.Ui`/`qs.Commons` APIs and `/usr/bin/python3` (standard library only). NVIDIA metrics optionally use `/usr/bin/nvidia-smi`; AMD metrics use the kernel's `amdgpu` sysfs interface. Missing or unsupported telemetry is shown as unavailable. No root privileges, separate service or Python packages are needed. Intel GPU telemetry and per-application GPU usage are not implemented.
 
 ## Screenshots
 
@@ -57,7 +57,7 @@ Click a RAM/CPU/GPU bar icon or percentage to toggle the popup; Escape or an out
 - Application CPU: summed user/system tick deltas normalized by logical core count. Opening requires two samples; PID reuse is detected and exited processes are not retained.
 - RSS: summed resident pages from `/proc/PID/stat`. Shared pages count in each process, so group totals can exceed attributable physical memory. PSS: summed readable `smaps_rollup` proportional memory; a missing PSS for any nonzero-RSS process makes that group's PSS unavailable, never a mixture of RSS and PSS. Application totals need not equal system-used RAM.
 - Common browser/Steam helpers join their application group. Other executables group by basename; interpreter-based programs may share a Python/Node group. Kernel threads are grouped.
-- GPU: NVIDIA utilization, VRAM and sensor values, with unavailable values when unsupported.
+- GPU: NVIDIA via `nvidia-smi`, or AMD via `/sys/class/drm/card*/device` with the `amdgpu` driver: utilization, VRAM, temperature and power. AMD fan percentage is measured RPM divided by maximum RPM, not PWM duty; it is unavailable without both counters. Missing/denied sysfs metrics remain unavailable independently. AMD names use `product_name` when exposed, otherwise a generic AMD label with the PCI device ID. On integrated GPUs, VRAM is the driver's reported VRAM pool, not all shared system memory. A working NVIDIA query takes priority; otherwise AMD is used. The dashboard displays the first card from the selected backend, not a multi-GPU aggregate.
 - Network: per-interface receive/transmit counter deltas; tunnels can overlap physical traffic. Disk rates use whole block devices, not partitions. Storage deduplicates same-source/same-capacity mounts.
 - One Python collector samples every two seconds **after collection**. Process and smaps scans occur only while the popup is open. CPU/RAM/GPU history keeps 60 samples; per-interface network history keeps 60 points updated only while open. Histories are in memory. Detail cost depends on process count and memory maps; no performance guarantees or published benchmark claims are made.
 - Bar metrics become stale after eight seconds without a successful sample. Collector restart attempts occur every ten seconds after failure. Animations are finite.
@@ -102,7 +102,7 @@ PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -v
 omarchy plugin validate "$PWD"
 ```
 
-Tests cover accounting and collector/IPC/source security contracts. Some source checks are structural and GPU tests use mocked subprocess responses; neither proves live QML rendering. Plugin validation checks manifest compatibility, not runtime or visual acceptance. Validate live behavior separately before release; this public candidate has not been installed or used to restart the shell during preparation.
+Tests cover accounting and collector/IPC/source security contracts, including AMD sysfs parsing, missing metrics and GPU fallback. Some source checks are structural; GPU tests use mocked NVIDIA responses and synthetic AMD sysfs trees. These do not prove live QML rendering. Plugin validation checks manifest compatibility, not runtime or visual acceptance. Validate live behavior separately before release; this public candidate has not been installed or used to restart the shell during preparation.
 
 ## License and compatibility
 

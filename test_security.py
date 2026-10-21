@@ -20,7 +20,7 @@ class SecurityTests(unittest.TestCase):
         from unittest.mock import patch
         import subprocess
         with patch.object(backend.os, 'access', return_value=True), patch.object(backend.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0, stdout='GPU, 1, 2, 3, 4, 5, 6\n')) as run:
-            backend.gpu()
+            backend.nvidia_gpu()
         self.assertTrue(run.called, msg='GPU query boundary was not exercised')
         self.assertEqual(run.call_args.args[0][0], '/usr/bin/nvidia-smi')
         self.assertFalse(run.call_args.kwargs.get('shell', False))
@@ -33,7 +33,7 @@ class SecurityTests(unittest.TestCase):
         import backend
         from unittest.mock import patch
         with patch.object(backend.os, 'access', return_value=False), patch.object(backend.subprocess, 'run') as run:
-            self.assertFalse(backend.gpu()['available'])
+            self.assertFalse(backend.nvidia_gpu()['available'])
             run.assert_not_called()
 
     def test_gpu_failures_are_sanitized(self):
@@ -43,9 +43,9 @@ class SecurityTests(unittest.TestCase):
         failures = [OSError('private diagnostic'), subprocess.TimeoutExpired('private command', 1.5)]
         for failure in failures:
             with self.subTest(failure=type(failure).__name__), patch.object(backend.os, 'access', return_value=True), patch.object(backend.subprocess, 'run', side_effect=failure):
-                self.assertEqual(backend.gpu(), {'available': False, 'error': 'NVIDIA telemetry unavailable'})
+                self.assertEqual(backend.nvidia_gpu(), {'available': False, 'error': 'NVIDIA telemetry unavailable'})
         with patch.object(backend.os, 'access', return_value=True), patch.object(backend.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0, stdout='malformed, private data')):
-            self.assertEqual(backend.gpu(), {'available': False, 'error': 'NVIDIA telemetry unavailable'})
+            self.assertEqual(backend.nvidia_gpu(), {'available': False, 'error': 'NVIDIA telemetry unavailable'})
 
     def test_untrusted_dashboard_labels_are_plain_text(self):
         source = (ROOT / 'Dashboard.qml').read_text()

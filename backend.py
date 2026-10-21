@@ -11,6 +11,7 @@ import sys
 import time
 
 PROC = Path('/proc')
+DRM = Path('/sys/class/drm')
 HZ = os.sysconf('SC_CLK_TCK')
 PAGE = os.sysconf('SC_PAGE_SIZE')
 
@@ -45,7 +46,7 @@ def number(value):
     except ValueError:
         return None
 
-def gpu():
+def nvidia_gpu():
     if not os.access('/usr/bin/nvidia-smi', os.X_OK):
         return dict(available=False, error='GPU telemetry unavailable')
     try:
@@ -59,6 +60,56 @@ def gpu():
         return dict(available=bool(cards), cards=cards, **(cards[0] if cards else {}))
     except (OSError, ValueError, subprocess.TimeoutExpired):
         return dict(available=False, error='NVIDIA telemetry unavailable')
+
+def sysfs_number(path, scale=1):
+    try:
+        value = int(read(path))
+        return value / scale if value >= 0 else None
+    except (OSError, ValueError):
+        return None
+
+def amd_gpu():
+    cards = []
+    for card in sorted(DRM.glob('card[0-9]*')):
+        if not card.name[4:].isdigit():
+            continue  # skip connector entries such as card0-DP-1
+        device = card / 'device'
+        try:
+            if read(device / 'vendor').strip() != '0x1002' or (device / 'driver').resolve().name != 'amdgpu':
+                continue
+            try:
+                name = read(device / 'product_name').strip()
+            except OSError:
+                name = 'AMD GPU (' + read(device / 'device').strip() + ')'
+        except OSError:
+            continue
+        temperature = power = fan = None
+        for hw in sorted((device / 'hwmon').glob('hwmon*')):
+            try:
+                if read(hw / 'name').strip() != 'amdgpu':
+                    continue
+            except OSError:
+                continue
+            temperature = sysfs_number(hw / 'temp1_input', 1000)
+            power = sysfs_number(hw / 'power1_average', 1000000)
+            if power is None:
+                power = sysfs_number(hw / 'power1_input', 1000000)
+            rpm, maximum = sysfs_number(hw / 'fan1_input'), sysfs_number(hw / 'fan1_max')
+            if rpm is not None and maximum:
+                fan = round(min(100, rpm / maximum * 100), 1)
+            break
+        cards.append(dict(name=name, percent=sysfs_number(device / 'gpu_busy_percent'),
+                          used=sysfs_number(device / 'mem_info_vram_used'),
+                          total=sysfs_number(device / 'mem_info_vram_total'),
+                          temperature=temperature, power=power, fan=fan))
+    return dict(available=bool(cards), cards=cards, **(cards[0] if cards else {}))
+
+def gpu():
+    nvidia = nvidia_gpu()
+    if nvidia['available']:
+        return nvidia
+    amd = amd_gpu()
+    return amd if amd['available'] else nvidia
 
 def network():
     result = {}

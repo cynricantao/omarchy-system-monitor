@@ -5,7 +5,7 @@
   "version": "1.0.0",
   "author": "cynricantao",
   "license": "MIT",
-  "description": "Lightweight CPU, RAM and NVIDIA GPU dashboard with application-grouped processes.",
+  "description": "Lightweight CPU, RAM and NVIDIA/AMD GPU dashboard with application-grouped processes.",
   "kinds": ["bar-widget"],
   "entryPoints": {"barWidget": "Panel.qml"},
   "barWidget": {
