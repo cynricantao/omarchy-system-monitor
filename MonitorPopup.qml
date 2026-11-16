@@ -119,11 +119,9 @@ PanelWindow {
   // Clickable region is the whole screen. Clicks in the bar strip are
   // forwarded to registered bar buttons so switching between panel icons
   // works in one click even when the overlay surface is above the bar.
-  readonly property real _barStripSize: {
-    if (!bar) return 0
-    var actual = (root.barPos === "top" || root.barPos === "bottom") ? root.barH : root.barW
-    return Math.max(bar.barSize, actual) + root.gap
-  }
+  readonly property real barThickness: !bar ? 0
+    : (typeof bar.barSizeFor === "function" && screen ? bar.barSizeFor(screen.name) : bar.barSize)
+  readonly property real _barStripSize: bar ? barThickness + gap : 0
   mask: Region {
     width: root.screenW
     height: root.screenH
@@ -154,10 +152,10 @@ PanelWindow {
   readonly property real screenW: screen ? screen.width : 0
   readonly property real screenH: screen ? screen.height : 0
   readonly property real availableCardWidth: screenW > 0
-    ? Math.max(120, screenW - ((barPos === "left" || barPos === "right") ? barW + gap + margin : margin * 2))
+    ? Math.max(120, screenW - ((barPos === "left" || barPos === "right") ? barThickness + gap + margin : margin * 2))
     : 0
   readonly property real availableCardHeight: screenH > 0
-    ? Math.max(120, screenH - ((barPos === "top" || barPos === "bottom") ? barH + gap + margin : margin * 2))
+    ? Math.max(120, screenH - ((barPos === "top" || barPos === "bottom") ? barThickness + gap + margin : margin * 2))
     : 0
   readonly property real verticalContentInset: padding * 2 + Border.top(borderSpec) + Border.bottom(borderSpec)
 
@@ -199,22 +197,22 @@ PanelWindow {
     var x = 0, y = 0
     if (centerOnBar && (barPos === "top" || barPos === "bottom")) {
       x = screenW / 2 - contentWidth / 2
-      y = barPos === "bottom" ? screenH - barH - contentHeight - gap : barH + gap
+      y = barPos === "bottom" ? screenH - barThickness - contentHeight - gap : barThickness + gap
     } else if (centerOnBar) {
-      x = barPos === "left" ? barW + gap : screenW - barW - contentWidth - gap
+      x = barPos === "left" ? barThickness + gap : screenW - barThickness - contentWidth - gap
       y = screenH / 2 - contentHeight / 2
     } else if (barPos === "bottom") {
       x = anchorScreenPos.x + anchorW / 2 - contentWidth / 2
-      y = screenH - barH - contentHeight - gap
+      y = screenH - barThickness - contentHeight - gap
     } else if (barPos === "left") {
-      x = barW + gap
+      x = barThickness + gap
       y = anchorScreenPos.y + anchorH / 2 - contentHeight / 2
     } else if (barPos === "right") {
-      x = screenW - barW - contentWidth - gap
+      x = screenW - barThickness - contentWidth - gap
       y = anchorScreenPos.y + anchorH / 2 - contentHeight / 2
     } else { // "top" (default)
       x = anchorScreenPos.x + anchorW / 2 - contentWidth / 2
-      y = barH + gap
+      y = barThickness + gap
     }
     x = Math.max(margin, Math.min(x, screenW - contentWidth - margin))
     y = Math.max(margin, Math.min(y, screenH - contentHeight - margin))
